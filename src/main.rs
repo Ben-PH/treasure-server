@@ -67,16 +67,17 @@ async fn main() -> std::io::Result<()> {
             .data(auth::DbCollections::init(users))
             .data(auth::PwdDb::init(pwds))
             .data(AppData { rng })
-            .data(db::DataBase{subjects, topics, learning_objectives})
+            .data(db::DataBase {
+                subjects,
+                topics,
+                learning_objectives,
+            })
             .service(
                 web::scope("/api/auth")
                     .configure(auth::config)
                     .default_service(web::route().to(web::HttpResponse::NotFound)),
             )
-            .service(
-                web::scope("/api/graph")
-                    .configure(db::config)
-            )
+            .service(web::scope("/api/graph").configure(db::config))
             .service(Files::new("/pkg", "./client/pkg"))
             .service(Files::new("/", "./client/static").index_file("index.html"))
             .default_service(web::get().to(index))
