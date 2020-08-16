@@ -66,6 +66,7 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/api/auth")
                     .configure(auth::config)
+                    .service(populate_db)
                     .default_service(web::route().to(web::HttpResponse::NotFound)),
             )
             .service(Files::new("/pkg", "./client/pkg"))
@@ -75,4 +76,16 @@ async fn main() -> std::io::Result<()> {
     .bind("127.0.0.1:8080")?
     .run()
     .await
+}
+
+#[post("dev/populate")]
+async fn populate_db() -> Result<actix_web::HttpResponse> {
+    let mut intro = shared::Subject::init(
+        "intro_to_cs".to_string(),
+        shared::Field::ComputerScience
+    );
+    let topic = shared::Topic::init("getting_started".to_string());
+    intro.take_topic(topic);
+    log::info!("populating");
+    actix_web::HttpResponse::Ok().json(&intro).await
 }
