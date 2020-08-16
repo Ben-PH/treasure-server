@@ -1,4 +1,3 @@
-
 use std::num::NonZeroU32;
 
 use actix_identity::Identity;

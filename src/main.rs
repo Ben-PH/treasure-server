@@ -1,9 +1,10 @@
 use actix_files::{Files, NamedFile};
 use actix_identity::{CookieIdentityPolicy, Identity, IdentityService};
-use actix_web::{post, middleware, web, App, HttpServer, Result};
+use actix_web::{middleware, web, App, HttpServer, Result};
 use ring::rand::SystemRandom;
 
 mod auth;
+mod db;
 use rand::Rng;
 use ring::rand::SecureRandom;
 
@@ -38,7 +39,6 @@ async fn main() -> std::io::Result<()> {
         .await
         .unwrap()
         .database("treasure_mind");
-
     HttpServer::new(move || {
         // First fill is high-latency. so do it one time round
         let rng = ring::rand::SystemRandom::new();
@@ -52,6 +52,10 @@ async fn main() -> std::io::Result<()> {
         let users = db.collection("users");
         let pwds = db.collection("passwords");
 
+        let subjects = db.collection("subjects");
+        let topics = db.collection("topics");
+        let learning_objectives = db.collection("learning_objectives");
+
         App::new()
             .wrap(IdentityService::new(
                 CookieIdentityPolicy::new(&private_key)
@@ -63,11 +67,15 @@ async fn main() -> std::io::Result<()> {
             .data(auth::DbCollections::init(users))
             .data(auth::PwdDb::init(pwds))
             .data(AppData { rng })
+            .data(db::DataBase{subjects, topics, learning_objectives})
             .service(
                 web::scope("/api/auth")
                     .configure(auth::config)
-                    .service(populate_db)
                     .default_service(web::route().to(web::HttpResponse::NotFound)),
+            )
+            .service(
+                web::scope("/api/graph")
+                    .configure(db::config)
             )
             .service(Files::new("/pkg", "./client/pkg"))
             .service(Files::new("/", "./client/static").index_file("index.html"))
@@ -76,16 +84,4 @@ async fn main() -> std::io::Result<()> {
     .bind("127.0.0.1:8080")?
     .run()
     .await
-}
-
-#[post("dev/populate")]
-async fn populate_db() -> Result<actix_web::HttpResponse> {
-    let mut intro = shared::Subject::init(
-        "intro_to_cs".to_string(),
-        shared::Field::ComputerScience
-    );
-    let topic = shared::Topic::init("getting_started".to_string());
-    intro.take_topic(topic);
-    log::info!("populating");
-    actix_web::HttpResponse::Ok().json(&intro).await
 }
