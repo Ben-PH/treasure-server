@@ -23,7 +23,6 @@ env_logger = "*"
 log = "0.4.11"
 lazy_static = "1.4"
 mongodb = "1.0.0"
-futures-async-stream = "0.2"
 bson = "*"
 
 shared = { path = "../shared" }
