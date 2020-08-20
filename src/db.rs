@@ -48,7 +48,32 @@ async fn get_topic_list(
     while let Some(Ok(topic)) = arr.next().await {
         let id = topic.get_i32("id").unwrap();
         let name = topic.get_str("name").unwrap();
-        v.insert(id, Topic::init(id, name.to_string()));
+        println!("topic: {:?}", topic);
+        let mut new = Topic::init(id, name.to_string());
+        let tasks = topic.get("tasks").unwrap();
+
+        let mut tops = db
+            .as_ref()
+            .learning_objectives
+            .find(bson::doc! {"_id" : {"$in" : tasks}}, None)
+            .await
+            .unwrap();
+
+        println!("tasks: {:#?}", tasks);
+        while let Some(Ok(lo)) = tops.next().await {
+            let id = lo.get_i32("id").unwrap();
+            let name = lo.get_str("name").unwrap();
+            let task = lo.get_str("task").unwrap();
+            let mut new_lo = shared::LearningObj::init(id, name.to_string(), task.to_string());
+            if let bson::Bson::Array(hints) = lo.get("hints").unwrap() {
+                for hint in hints {
+                    new_lo.hints.push(hint.to_string());
+                    println!("hint: {:#?}", hint);
+                }
+            }
+            new.learning_objectives.insert(id, Rc::new(new_lo));
+        }
+        v.insert(id, new);
     }
     Ok(v)
 }
