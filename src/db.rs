@@ -7,13 +7,25 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(get_subjects).service(get_topics);
+    cfg.service(get_subjects).service(get_topics).service(query_adb);
 }
 
 pub struct DataBase {
     pub subjects: Collection,
     pub topics: Collection,
     pub learning_objectives: Collection,
+}
+
+#[get("adb/query/{query}")]
+pub async fn query_adb (
+    con: web::Data<std::sync::Arc<arangors::Connection>>,
+    query: web::Path<String>
+) -> impl Responder {
+    let db = con.db("treasure_mind").await.unwrap();
+    let q =query.replace("%20", " ");
+    println!("{}", q);
+    let resp: Vec<serde_json::value::Value> = db.aql_str(&q).await.unwrap();
+    format!("{:?}", resp)
 }
 
 #[get("topics/{subj_id}")]
