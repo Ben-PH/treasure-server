@@ -6,8 +6,12 @@ use shared::{Field, Subject, SubjectId, Topic, TopicId};
 use std::collections::HashMap;
 use std::rc::Rc;
 
+mod structures;
+
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(get_subjects).service(get_topics).service(query_adb);
+    cfg.service(get_subjects)
+       .service(get_topics)
+       .service(get_cggraph);
 }
 
 pub struct DataBase {
@@ -16,16 +20,36 @@ pub struct DataBase {
     pub learning_objectives: Collection,
 }
 
-#[get("adb/query/{query}")]
-pub async fn query_adb (
+#[get("cg_map")]
+pub async fn get_cggraph (
     con: web::Data<std::sync::Arc<arangors::Connection>>,
-    query: web::Path<String>
 ) -> impl Responder {
     let db = con.db("treasure_mind").await.unwrap();
-    let q =query.replace("%20", " ");
-    println!("{}", q);
-    let resp: Vec<serde_json::value::Value> = db.aql_str(&q).await.unwrap();
-    format!("{:?}", resp)
+    let goals: Vec<structures::ConsensusGoal> = db.aql_str("for u in consensus_goals return u").await.unwrap();
+    let edges: Vec<structures::ConsensusEdge> = db.aql_str("for u in progs return u").await.unwrap();
+    let mut res_goals = shared::learning_trajectory::CGMap::with_capacity(goals.len());
+    for goal in goals.iter() {
+        let g = shared::learning_trajectory::ConsensusGoal {
+            plugged: goal.plugged,
+            st8mnt: goal.st8mnt.to_string(),
+            weight: goal.weight,
+        };
+        res_goals.insert(goal.id, g);
+    }
+
+    let mut res_edges = shared::learning_trajectory::CEMap::with_capacity(edges.len());
+    for edge in edges.iter() {
+        let e = shared::learning_trajectory::ConsensusEdge {
+            label: edge.label.to_string(),
+            left: edge.left,
+            weight: edge.weight,
+            right: edge.right,
+        };
+        res_edges.insert(edge.id, e);
+    }
+    let map: shared::learning_trajectory::CGGraph = (res_goals, res_edges);
+
+    HttpResponse::Ok().json::<shared::learning_trajectory::CGGraph>(map).await
 }
 
 #[get("topics/{subj_id}")]
