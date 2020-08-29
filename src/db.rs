@@ -10,8 +10,8 @@ mod structures;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(get_subjects)
-       .service(get_topics)
-       .service(get_cggraph);
+        .service(get_topics)
+        .service(get_cggraph);
 }
 
 pub struct DataBase {
@@ -21,12 +21,14 @@ pub struct DataBase {
 }
 
 #[get("cg_map")]
-pub async fn get_cggraph (
-    con: web::Data<std::sync::Arc<arangors::Connection>>,
-) -> impl Responder {
+pub async fn get_cggraph(con: web::Data<std::sync::Arc<arangors::Connection>>) -> impl Responder {
     let db = con.db("treasure_mind").await.unwrap();
-    let goals: Vec<structures::ConsensusGoal> = db.aql_str("for u in consensus_goals return u").await.unwrap();
-    let edges: Vec<structures::ConsensusEdge> = db.aql_str("for u in progs return u").await.unwrap();
+    let goals: Vec<structures::ConsensusGoal> = db
+        .aql_str("for u in consensus_goals return u")
+        .await
+        .unwrap();
+    let edges: Vec<structures::ConsensusEdge> =
+        db.aql_str("for u in progs return u").await.unwrap();
     let mut res_goals = shared::learning_trajectory::CGMap::with_capacity(goals.len());
     for goal in goals.iter() {
         let g = shared::learning_trajectory::ConsensusGoal {
@@ -49,7 +51,9 @@ pub async fn get_cggraph (
     }
     let map: shared::learning_trajectory::CGGraph = (res_goals, res_edges);
 
-    HttpResponse::Ok().json::<shared::learning_trajectory::CGGraph>(map).await
+    HttpResponse::Ok()
+        .json::<shared::learning_trajectory::CGGraph>(map)
+        .await
 }
 
 #[get("topics/{subj_id}")]

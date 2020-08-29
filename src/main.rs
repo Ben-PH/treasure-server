@@ -39,7 +39,11 @@ async fn main() -> std::io::Result<()> {
         .await
         .unwrap()
         .database("treasure_mind");
-    let adb_conn: std::sync::Arc<arangors::Connection> = std::sync::Arc::new(arangors::Connection::establish_without_auth("http://localhost:8529").await.unwrap());
+    let adb_conn: std::sync::Arc<arangors::Connection> = std::sync::Arc::new(
+        arangors::Connection::establish_without_auth("http://localhost:8529")
+            .await
+            .unwrap(),
+    );
     HttpServer::new(move || {
         // First fill is high-latency. so do it one time round
         let rng = ring::rand::SystemRandom::new();

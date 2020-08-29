@@ -1,4 +1,3 @@
-
 #[derive(Debug, serde::Deserialize)]
 pub struct ConsensusEdge {
     pub id: u32,
@@ -7,7 +6,6 @@ pub struct ConsensusEdge {
     pub right: u32,
     pub weight: f32,
 }
-
 
 #[derive(Debug, serde::Deserialize)]
 pub struct ConsensusGoal {
